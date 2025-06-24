@@ -2,6 +2,7 @@ from flask import Flask, send_file, request
 import requests
 from bs4 import BeautifulSoup
 import pdfkit
+import os
 
 # Flask app
 app = Flask(__name__)
@@ -44,7 +45,7 @@ POP_CODES = [
     "YOW", "YTY", "YUL", "YVR", "YWG", "YXE", "YYC", "YYZ", "ZAG", "ZDM", "ZGN", "ZRH"
 ]
 
-# Consistent selector for coordinates
+# CSS selector for coordinate extraction
 COORD_SELECTOR = "body > div > div > main > section.mx-auto.max-w-4xl.space-y-8 > div > div > div:nth-child(1) > div:nth-child(3) > div > p:nth-child(2)"
 
 # Fetch coordinates and generate PDF
@@ -69,13 +70,13 @@ def generate_pdf():
     pdfkit.from_string(html_content, pdf_file)
     return pdf_file
 
-# Flask route to trigger PDF generation and offer it for download
+# Flask route to trigger PDF generation and download
 @app.route('/download', methods=['GET'])
 def download_pdf():
-    pdf_file = generate_pdf()  # Generate the PDF
+    pdf_file = generate_pdf()
     return send_file(pdf_file, as_attachment=True)
 
-# Default route
+# Home route
 @app.route('/')
 def home():
     return '''
@@ -86,8 +87,7 @@ def home():
         </a>
     '''
 
+# Bind to 0.0.0.0 so Render can detect the web service
 if __name__ == "__main__":
-    import os
-
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
