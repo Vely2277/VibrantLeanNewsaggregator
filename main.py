@@ -1,4 +1,4 @@
-from flask import Flask, send_file, request
+from flask import Flask, send_file, render_template_string
 import requests
 from bs4 import BeautifulSoup
 import pdfkit
@@ -48,26 +48,23 @@ POP_CODES = [
 # CSS selector for coordinate extraction
 COORD_SELECTOR = "body > div > div > main > section.mx-auto.max-w-4xl.space-y-8 > div > div > div:nth-child(1) > div:nth-child(3) > div > p:nth-child(2)"
 
-# Fetch coordinates and generate PDF
+# Generate PDF with combined coordinates
 def generate_pdf():
     html_content = "<h1>Cloudflare PoP Coordinates</h1><ul>"
     for code in POP_CODES:
         url = BASE_URL + code.lower() + "/"
         try:
-            print(f"Fetching data for: {code}")
-            response = requests.get(url)
+            response = requests.get(url, timeout=10)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
-            coordinates = soup.select_one(COORD_SELECTOR).text
-            print(f"Coordinates for {code}: {coordinates}")
-            html_content += f"<li>{code}: {coordinates}</li>"
+            coordinates = soup.select_one(COORD_SELECTOR).text.strip()
+            html_content += f"<li><b>{code}</b>: {coordinates}</li>"
         except Exception as e:
-            print(f"Failed to fetch data for {code}: {e}")
-            html_content += f"<li>{code}: Error fetching data</li>"
+            html_content += f"<li><b>{code}</b>: Error fetching data</li>"
 
     html_content += "</ul>"
     pdf_file = "Cloudflare_PoP_Coordinates.pdf"
-    pdfkit.from_string(html_content, pdf_file)
+    pdfkit.from_string(html_content, pdf_file, configuration=pdfkit.configuration(wkhtmltopdf='/usr/bin/wkhtmltopdf'))
     return pdf_file
 
 # Flask route to trigger PDF generation and download
@@ -87,7 +84,7 @@ def home():
         </a>
     '''
 
-# Bind to 0.0.0.0 so Render can detect the web service
+# Run the app
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host="0.0.0.0", port=port)
